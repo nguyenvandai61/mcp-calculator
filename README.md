@@ -31,15 +31,42 @@ pip install -r requirements.txt
 export MCP_ENDPOINT=<your_mcp_endpoint>
 ```
 
-3. Run the calculator example | 运行计算器示例:
+3. Run the news crawler example | 运行新闻爬虫示例:
 ```bash
-python mcp_pipe.py calculator.py
+python mcp_pipe.py app.py
 ```
 
 Or run all configured servers | 或运行所有配置的服务:
 ```bash
 python mcp_pipe.py
 ```
+
+### Docker Deployment | Docker 部署
+
+You can also run the NewsCrawler MCP server using Docker. The container uses `mcp_pipe.py` to connect to a WebSocket endpoint.
+
+1. **Set the MCP endpoint**:
+   Create a `.env` file or export the variable:
+   ```bash
+   export MCP_ENDPOINT=ws://your-mcp-endpoint:8080
+   ```
+
+2. **Build the image**:
+   ```bash
+   docker build -t mcp-newscrawler .
+   ```
+
+3. **Run with Docker Compose** (recommended):
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Run with Docker CLI**:
+   ```bash
+   docker run -it --name mcp-newscrawler -e MCP_ENDPOINT=$MCP_ENDPOINT mcp-newscrawler
+   ```
+
+*Note: When using `stdio` transport in Docker, ensure you use the `-it` flags to keep stdin open for communication.*
 
 *Requires `mcp_config.json` configuration file with server definitions (supports stdio/sse/http transport types)*
 
@@ -48,7 +75,7 @@ python mcp_pipe.py
 ## Project Structure | 项目结构
 
 - `mcp_pipe.py`: Main communication pipe that handles WebSocket connections and process management | 处理WebSocket连接和进程管理的主通信管道
-- `calculator.py`: Example MCP tool implementation for mathematical calculations | 用于数学计算的MCP工具示例实现
+- `app.py`: MCP server with news crawling tools | 带有新闻爬虫工具的MCP服务器
 - `requirements.txt`: Project dependencies | 项目依赖
 
 ## Config-driven Servers | 通过配置驱动的服务

@@ -1,0 +1,13 @@
+services:
+  mcp-newscrawler:
+    build: .
+    container_name: mcp-newscrawler
+    stdin_open: true # Equivalent to -i
+    tty: true        # Equivalent to -t
+    restart: unless-stopped
+    environment:
+      - MCP_ENDPOINT=${MCP_ENDPOINT:-ws://localhost:8080}
+    # If you want to use SSE transport, you would uncomment the following:
+    # command: python app.py --transport sse
+    # ports:
+    #   - "8000:8000"
