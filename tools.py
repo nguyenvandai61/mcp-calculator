@@ -99,32 +99,149 @@ class NewsCrawler:
 
     @staticmethod
     def _read_article(url: str) -> dict:
-        """Read the full content of a news article from VNExpress."""
+        """Read the full content of a news article from VNExpress or CafeF."""
         try:
-            response = requests.get(url, timeout=10)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Extract title
-            title = soup.find('h1', class_='title-detail')
-            title_text = title.get_text(strip=True) if title else "No title found"
+            title_text = ""
+            desc_text = ""
+            content_text = ""
+
+            if "vnexpress.net" in url:
+                # Extract title
+                title = soup.find('h1', class_='title-detail')
+                title_text = title.get_text(strip=True) if title else "No title found"
+                
+                # Extract description
+                description = soup.find('p', class_='description')
+                desc_text = description.get_text(strip=True) if description else ""
+                
+                # Extract main content
+                content_div = soup.find('article', class_='fck_detail')
+                if content_div:
+                    paragraphs = content_div.find_all('p')
+                    content_text = '\n'.join([p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
             
-            # Extract description
-            description = soup.find('p', class_='description')
-            desc_text = description.get_text(strip=True) if description else ""
+            elif "cafef.vn" in url:
+                # Extract title
+                title = soup.find('h1', class_='title') or soup.find('h1', class_='title-detail')
+                title_text = title.get_text(strip=True) if title else "No title found"
+                
+                # Extract description
+                description = soup.find('h2', class_='sapo')
+                desc_text = description.get_text(strip=True) if description else ""
+                
+                # Extract main content
+                content_div = soup.find('div', id='mainContent') or soup.find('div', class_='left_cate_content')
+                if content_div:
+                    # Remove unwanted elements like related news, ads, etc.
+                    for unwanted in content_div.find_all(['div', 'table'], class_=['link-content-footer', 'box-embed-video']):
+                        unwanted.decompose()
+                    
+                    paragraphs = content_div.find_all(['p', 'div'], recursive=False)
+                    content_text = '\n'.join([p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
             
-            # Extract main content
-            content_div = soup.find('article', class_='fck_detail')
-            if content_div:
-                paragraphs = content_div.find_all('p')
-                content_text = '\n'.join([p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
-            else:
-                content_text = "No content found"
-            
+            if not title_text and not content_text:
+                return {"success": False, "error": "Could not parse article content. Unsupported site or structure changed."}
+
             full_content = f"Title: {title_text}\n\nDescription: {desc_text}\n\nContent:\n{content_text}"
             
             logger.info(f"Read article from {url}, length: {len(full_content)}")
             return {"success": True, "url": url, "content": full_content}
         except Exception as e:
             logger.error(f"Error reading article from {url}: {e}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def _crawl_cafef_news() -> dict:
+        """Crawl news headlines from CafeF homepage."""
+        try:
+            url = "https://cafef.vn/"
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+
+            headlines = []
+            # CafeF has several sections, we'll look for common headline patterns
+            # Main highlight
+            highlight = soup.find('div', class_='top_noibat')
+            if highlight:
+                link = highlight.find('a')
+                title = highlight.find('h2')
+                if link and title:
+                    article_url = link['href']
+                    if not article_url.startswith('http'):
+                        article_url = f"https://cafef.vn{article_url}"
+                    headlines.append({"title": title.get_text(strip=True), "url": article_url})
+
+            # Other news items
+            for item in soup.find_all('h3')[:15]:
+                link = item.find('a')
+                if link and 'href' in link.attrs:
+                    title = item.get_text(strip=True)
+                    article_url = link['href']
+                    if not article_url.startswith('http'):
+                        article_url = f"https://cafef.vn{article_url}"
+                    
+                    # Avoid duplicates
+                    if not any(h['url'] == article_url for h in headlines):
+                        headlines.append({"title": title, "url": article_url})
+
+            logger.info(f"Crawled {len(headlines)} CafeF news headlines")
+            return {"success": True, "headlines": headlines}
+        except Exception as e:
+            logger.error(f"Error crawling CafeF news: {e}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def _crawl_cafef_by_topic(topic: str) -> dict:
+        """Crawl news headlines by topic from CafeF."""
+        topic_urls = {
+            "thoi-su": "https://cafef.vn/thoi-su.chn",
+            "chung-khoan": "https://cafef.vn/thoi-su-dau-tu/chung-khoan.chn",
+            "bat-dong-san": "https://cafef.vn/bat-dong-san.chn",
+            "doanh-nghiep": "https://cafef.vn/doanh-nghiep.chn",
+            "tai-chinh-ngan-hang": "https://cafef.vn/tai-chinh-ngan-hang.chn",
+            "vi-mo": "https://cafef.vn/vi-mo-dau-tu.chn",
+            "song": "https://cafef.vn/song.chn",
+            "thi-truong-hang-hoa": "https://cafef.vn/thi-truong-hang-hoa.chn"
+        }
+        
+        if topic not in topic_urls:
+            return {"success": False, "error": f"Topic '{topic}' not found for CafeF. Available topics: {list(topic_urls.keys())}"}
+        
+        try:
+            url = topic_urls[topic]
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            headlines = []
+            # Category pages often use h3 for titles
+            for item in soup.find_all('h3')[:15]:
+                link = item.find('a')
+                if link and 'href' in link.attrs:
+                    title = item.get_text(strip=True)
+                    article_url = link['href']
+                    if not article_url.startswith('http'):
+                        article_url = f"https://cafef.vn{article_url}"
+                    
+                    if not any(h['url'] == article_url for h in headlines):
+                        headlines.append({"title": title, "url": article_url})
+            
+            logger.info(f"Crawled {len(headlines)} CafeF headlines for topic '{topic}'")
+            return {"success": True, "topic": topic, "headlines": headlines}
+        except Exception as e:
+            logger.error(f"Error crawling CafeF news for topic '{topic}': {e}")
             return {"success": False, "error": str(e)}

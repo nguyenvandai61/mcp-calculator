@@ -5,6 +5,12 @@
 ## 🔵 Implementing
 
 ## 🟢 Reviewing
+- [ ] TASK-003: Support crawling news from CafeF | Priority: Medium | Type: Feature | Area: MCP Tools | 🔒 LOCKED: se-reviewer
+  - Planner Lite: `sase/briefings/BRF-TASK-003-lite.md`
+  - BriefingScript: `sase/briefings/BRF-TASK-003.yaml`
+  - LoopScript: `sase/loops/LOOP-TASK-003.yaml`
+  - MRP: `sase/mrp/MRP-TASK-003.md`
+
 - [ ] TASK-001: Enable multi-turn conversation for reading news articles | Priority: High | Type: Feature | Area: MCP Tools | 🔒 LOCKED: se-reviewer
   - Planner Lite: `sase/briefings/BRF-TASK-001-lite.md`
   - BriefingScript: `sase/briefings/BRF-TASK-001.yaml`

@@ -75,7 +75,7 @@ You can also run the NewsCrawler MCP server using Docker. The container uses `mc
 ## Project Structure | 项目结构
 
 - `mcp_pipe.py`: Main communication pipe that handles WebSocket connections and process management | 处理WebSocket连接和进程管理的主通信管道
-- `app.py`: MCP server with news crawling tools | 带有新闻爬虫工具的MCP服务器
+- `app.py`: MCP server with news crawling tools (VNExpress and CafeF) | 带有新闻爬虫工具的MCP服务器 (VNExpress 和 CafeF)
 - `requirements.txt`: Project dependencies | 项目依赖
 
 ## Config-driven Servers | 通过配置驱动的服务
@@ -108,6 +108,7 @@ if __name__ == "__main__":
 
 ## Use Cases | 使用场景
 
+- News crawling (VNExpress, CafeF) | 新闻爬虫 (VNExpress, CafeF)
 - Mathematical calculations | 数学计算
 - Email operations | 邮件操作
 - Knowledge base search | 知识库搜索

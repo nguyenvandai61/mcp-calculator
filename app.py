@@ -45,11 +45,30 @@ def crawl_news_by_topic(topic: str) -> dict:
 # Add a tool to read full article content
 @mcp.tool()
 def read_article(url: str) -> dict:
-    """Read the full content of a news article from VNExpress.
+    """Read the full content of a news article from VNExpress or CafeF.
     
     Provide the URL of the article to read its title, description, and full content.
     Useful for getting detailed information after selecting a headline."""
     return NewsCrawler._read_article(url)
+
+# Add a CafeF news crawler tool
+@mcp.tool()
+def crawl_cafef_news() -> dict:
+    """Crawl latest news headlines from CafeF (Vietnamese financial news source).
+    
+    This tool fetches the latest news headlines from the CafeF homepage.
+    Returns a list of top headlines."""
+    return NewsCrawler._crawl_cafef_news()
+
+# Add a CafeF news crawler by topic tool
+@mcp.tool()
+def crawl_cafef_by_topic(topic: str) -> dict:
+    """Crawl news headlines by specific topic from CafeF.
+    
+    Available topics: thoi-su, chung-khoan, bat-dong-san, doanh-nghiep, tai-chinh-ngan-hang, vi-mo, song, thi-truong-hang-hoa
+    
+    Example: topic="chung-khoan" for stock market news."""
+    return NewsCrawler._crawl_cafef_by_topic(topic)
 
 # Start the server
 if __name__ == "__main__":

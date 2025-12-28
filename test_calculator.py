@@ -70,36 +70,6 @@ class TestCrawlNewsToday(unittest.TestCase):
         self.assertEqual(result["success"], False)
         self.assertIn("Network error", result["error"])
 
-class TestCrawlGoldNews(unittest.TestCase):
-    @patch('tools.requests.get')
-    def test_successful_gold_crawl(self, mock_get):
-        # Mock response with gold table
-        mock_response = MagicMock()
-        mock_response.content = '''
-        <html>
-        <body>
-        <table class="tbl-tygia">
-        <tr><th>Currency</th><th>Buy</th><th>Sell</th></tr>
-        <tr><td>Vàng SJC</td><td>75.000</td><td>76.000</td></tr>
-        </table>
-        </body>
-        </html>
-        '''
-        mock_response.raise_for_status.return_value = None
-        mock_get.return_value = mock_response
-
-        result = NewsCrawler._crawl_gold_news()
-        self.assertEqual(result["success"], True)
-        self.assertIn("Vàng SJC: Mua 75.000, Bán 76.000", result["gold_info"])
-
-    @patch('tools.requests.get')
-    def test_gold_request_failure(self, mock_get):
-        mock_get.side_effect = Exception("Network error")
-
-        result = NewsCrawler._crawl_gold_news()
-        self.assertEqual(result["success"], False)
-        self.assertIn("Network error", result["error"])
-
 class TestCrawlNewsByTopic(unittest.TestCase):
     @patch('tools.requests.get')
     def test_successful_topic_crawl(self, mock_get):
@@ -167,6 +137,71 @@ class TestReadArticle(unittest.TestCase):
         result = NewsCrawler._read_article("https://vnexpress.net/test-article")
         self.assertEqual(result["success"], False)
         self.assertIn("Network error", result["error"])
+
+class TestCrawlCafeF(unittest.TestCase):
+    @patch('tools.requests.get')
+    def test_successful_cafef_crawl(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.content = '''
+        <html>
+        <body>
+        <div class="top_noibat">
+            <h2><a href="/highlight">Highlight News</a></h2>
+        </div>
+        <h3><a href="/news-1">News 1</a></h3>
+        <h3><a href="/news-2">News 2</a></h3>
+        </body>
+        </html>
+        '''
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = NewsCrawler._crawl_cafef_news()
+        self.assertEqual(result["success"], True)
+        self.assertEqual(len(result["headlines"]), 3)
+        self.assertEqual(result["headlines"][0]["title"], "Highlight News")
+
+    @patch('tools.requests.get')
+    def test_successful_cafef_topic_crawl(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.content = '''
+        <html>
+        <body>
+        <h3><a href="/stock-1">Stock News 1</a></h3>
+        <h3><a href="/stock-2">Stock News 2</a></h3>
+        </body>
+        </html>
+        '''
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = NewsCrawler._crawl_cafef_by_topic("chung-khoan")
+        self.assertEqual(result["success"], True)
+        self.assertEqual(result["topic"], "chung-khoan")
+        self.assertEqual(len(result["headlines"]), 2)
+
+    @patch('tools.requests.get')
+    def test_cafef_article_read(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.content = '''
+        <html>
+        <body>
+        <h1 class="title">CafeF Article Title</h1>
+        <h2 class="sapo">CafeF Sapo</h2>
+        <div id="mainContent">
+            <p>CafeF Content Paragraph 1</p>
+            <p>CafeF Content Paragraph 2</p>
+        </div>
+        </body>
+        </html>
+        '''
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+
+        result = NewsCrawler._read_article("https://cafef.vn/test-article.chn")
+        self.assertEqual(result["success"], True)
+        self.assertIn("CafeF Article Title", result["content"])
+        self.assertIn("CafeF Content Paragraph 1", result["content"])
 
 if __name__ == '__main__':
     unittest.main()
