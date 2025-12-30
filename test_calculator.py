@@ -1,12 +1,12 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import sys
 import os
 
 # Add the current directory to sys.path to import calculator
 sys.path.insert(0, os.path.dirname(__file__))
 
-from tools import Calculator, NewsCrawler
+from tools import Calculator, NewsCrawler, WebBrowser
 
 class TestCalculator(unittest.TestCase):
     def test_simple_addition(self):
@@ -202,6 +202,60 @@ class TestCrawlCafeF(unittest.TestCase):
         self.assertEqual(result["success"], True)
         self.assertIn("CafeF Article Title", result["content"])
         self.assertIn("CafeF Content Paragraph 1", result["content"])
+
+class TestWebBrowser(unittest.IsolatedAsyncioTestCase):
+    @patch('tools.async_playwright')
+    async def test_google_search_mock(self, mock_playwright):
+        # Mock the playwright context manager and browser
+        mock_p = mock_playwright.return_value.__aenter__.return_value
+        
+        mock_browser = AsyncMock()
+        mock_p.chromium.launch.return_value = mock_browser
+        
+        mock_context = AsyncMock()
+        mock_browser.new_context.return_value = mock_context
+        
+        mock_page = AsyncMock()
+        mock_context.new_page.return_value = mock_page
+        
+        # Mock query_selector_all to return some mock elements
+        mock_el = AsyncMock()
+        mock_title_el = AsyncMock()
+        mock_title_el.inner_text.return_value = "Test Result"
+        mock_link_el = AsyncMock()
+        mock_link_el.get_attribute.return_value = "https://test.com"
+        
+        mock_el.query_selector.side_effect = lambda selector: mock_title_el if selector == "h3" else mock_link_el
+        mock_page.query_selector_all.return_value = [mock_el]
+        
+        result = await WebBrowser._google_search("test query")
+        
+        self.assertEqual(result["success"], True)
+        self.assertEqual(len(result["results"]), 1)
+        self.assertEqual(result["results"][0]["title"], "Test Result")
+        self.assertEqual(result["results"][0]["url"], "https://test.com")
+
+    @patch('tools.async_playwright')
+    async def test_browse_url_mock(self, mock_playwright):
+        mock_p = mock_playwright.return_value.__aenter__.return_value
+        
+        mock_browser = AsyncMock()
+        mock_p.chromium.launch.return_value = mock_browser
+        
+        mock_context = AsyncMock()
+        mock_browser.new_context.return_value = mock_context
+        
+        mock_page = AsyncMock()
+        mock_context.new_page.return_value = mock_page
+        
+        mock_page.title.return_value = "Test Page Title"
+        mock_page.evaluate.return_value = "Test Page Content"
+        
+        result = await WebBrowser._browse_url("https://test.com")
+        
+        self.assertEqual(result["success"], True)
+        self.assertEqual(result["title"], "Test Page Title")
+        self.assertEqual(result["content"], "Test Page Content")
 
 if __name__ == '__main__':
     unittest.main()

@@ -5,6 +5,18 @@
 ## 🔵 Implementing
 
 ## 🟢 Reviewing
+- [ ] TASK-005: Enhance Google Search anti-blocking mechanisms | Priority: High | Type: Feature | Area: MCP Tools | 🔒 LOCKED: se-reviewer
+  - Planner Lite: `sase/briefings/BRF-TASK-005-lite.md`
+  - BriefingScript: `sase/briefings/BRF-TASK-005.yaml`
+  - LoopScript: `sase/loops/LOOP-TASK-005.yaml`
+  - MRP: `sase/mrp/MRP-TASK-005.md`
+
+- [ ] TASK-004: Automated Google browsing with Playwright | Priority: High | Type: Feature | Area: MCP Tools | 🔒 LOCKED: se-reviewer
+  - Planner Lite: `sase/briefings/BRF-TASK-004-lite.md`
+  - BriefingScript: `sase/briefings/BRF-TASK-004.yaml`
+  - LoopScript: `sase/loops/LOOP-TASK-004.yaml`
+  - MRP: `sase/mrp/MRP-TASK-004.md`
+
 - [ ] TASK-003: Support crawling news from CafeF | Priority: Medium | Type: Feature | Area: MCP Tools | 🔒 LOCKED: se-reviewer
   - Planner Lite: `sase/briefings/BRF-TASK-003-lite.md`
   - BriefingScript: `sase/briefings/BRF-TASK-003.yaml`

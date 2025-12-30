@@ -10,6 +10,9 @@ COPY requirements.txt .
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install Playwright browsers and their system dependencies
+RUN playwright install chromium --with-deps
+
 # Copy the rest of the application code into the container
 COPY . .
 

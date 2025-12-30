@@ -6,3 +6,4 @@ mcp-proxy>=0.10.0
 fastmcp>=2.13.0.2
 requests>=2.25.1
 beautifulsoup4>=4.9.3
+playwright>=1.40.0

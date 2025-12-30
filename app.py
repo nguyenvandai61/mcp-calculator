@@ -18,10 +18,28 @@ import random
 import requests
 from bs4 import BeautifulSoup
 
-from tools import NewsCrawler
+from tools import NewsCrawler, WebBrowser
 
 # Create an MCP server
 mcp = FastMCP("NewsCrawler")
+
+# Add a Google search tool
+@mcp.tool()
+async def google_search(query: str) -> dict:
+    """Perform a Google search and return results (titles and URLs).
+    
+    This tool uses Playwright to automate a Google search and extract the top results.
+    Useful for finding information on the web."""
+    return await WebBrowser._google_search(query)
+
+# Add a tool to browse a specific URL
+@mcp.tool()
+async def browse_url(url: str) -> dict:
+    """Navigate to a specific URL and extract the page content.
+    
+    This tool uses Playwright to load a webpage and extract its text content.
+    Useful for reading detailed information from any website."""
+    return await WebBrowser._browse_url(url)
 
 # Add a news crawler tool
 @mcp.tool()

@@ -1,8 +1,11 @@
 import math
 import random
 import requests
+import asyncio
 from bs4 import BeautifulSoup
 import logging
+from playwright.async_api import async_playwright
+from urllib.parse import quote_plus
 
 logger = logging.getLogger('Tools')
 
@@ -244,4 +247,132 @@ class NewsCrawler:
             return {"success": True, "topic": topic, "headlines": headlines}
         except Exception as e:
             logger.error(f"Error crawling CafeF news for topic '{topic}': {e}")
+            return {"success": False, "error": str(e)}
+
+class WebBrowser:
+    """Class for automated web browsing using Playwright."""
+    
+    @staticmethod
+    async def _google_search(query: str) -> dict:
+        """Perform a Google search and return results. Falls back to DuckDuckGo if blocked."""
+        try:
+            async with async_playwright() as p:
+                # Launch with anti-automation flags
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=["--disable-blink-features=AutomationControlled"]
+                )
+                
+                context = await browser.new_context(
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    viewport={'width': 1280, 'height': 800},
+                    locale="en-US"
+                )
+                page = await context.new_page()
+                
+                # Optimize: Block images
+                await page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2}", lambda route: route.abort())
+                
+                # Try Google first
+                search_url = f"https://www.google.com/search?q={quote_plus(query)}"
+                await page.goto(search_url, timeout=20000)
+                
+                # Wait random delay to look more human (CÁCH 2)
+                await page.wait_for_timeout(random.randint(2000, 4000))
+                
+                content = await page.content()
+                results = []
+                source = "Google"
+
+                if "To continue, please type the characters below" in content or "Our systems have detected unusual traffic" in content:
+                    logger.warning("Google CAPTCHA detected, falling back to DuckDuckGo")
+                    # Fallback to DuckDuckGo (HTML version)
+                    await page.goto(f"https://duckduckgo.com/html/?q={quote_plus(query)}", timeout=20000)
+                    
+                    # Wait for results to load
+                    try:
+                        await page.wait_for_selector(".result__body", timeout=5000)
+                    except:
+                        pass
+
+                    content = await page.content()
+                    soup = BeautifulSoup(content, 'html.parser')
+                    
+                    for res in soup.select('.result__body')[:5]:
+                        title_el = res.select_one('.result__title a')
+                        if title_el:
+                            title = title_el.get_text(strip=True)
+                            url = title_el['href']
+                            results.append({"title": title, "url": url})
+                    source = "DuckDuckGo (Fallback)"
+                else:
+                    # Wait for search results to appear (CÁCH 2)
+                    try:
+                        await page.wait_for_selector("h3", timeout=10000)
+                    except:
+                        logger.warning("Timeout waiting for h3 selector on Google")
+
+                    # Use locator for more robust extraction as suggested (CÁCH 2)
+                    h3_locators = await page.locator("h3").all()
+                    for h3 in h3_locators[:5]:
+                        title = await h3.inner_text()
+                        if not title:
+                            continue
+                            
+                        # Find the parent anchor tag to get the URL
+                        parent_a = await h3.evaluate_handle("el => el.closest('a')")
+                        if parent_a:
+                            url = await parent_a.get_attribute("href")
+                            if url and url.startswith('http'):
+                                results.append({"title": title, "url": url})
+                    
+                    # Fallback to BeautifulSoup if locator didn't find enough results
+                    if len(results) < 2:
+                        content = await page.content()
+                        soup = BeautifulSoup(content, 'html.parser')
+                        for g in soup.select('div.g')[:5]:
+                            anchor = g.select_one('a')
+                            title_el = g.select_one('h3')
+                            if anchor and title_el:
+                                url = anchor['href']
+                                if url.startswith('/url?q='):
+                                    url = url.split('/url?q=')[1].split('&')[0]
+                                
+                                title = title_el.get_text(strip=True)
+                                if title and url.startswith('http') and not any(r['url'] == url for r in results):
+                                    results.append({"title": title, "url": url})
+
+                await browser.close()
+                logger.info(f"Search for '{query}' via {source} returned {len(results)} results")
+                return {"success": True, "query": query, "results": results[:5], "source": source}
+        except Exception as e:
+            logger.error(f"Error in search: {e}")
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    async def _browse_url(url: str) -> dict:
+        """Navigate to a URL and extract page content."""
+        try:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                context = await browser.new_context(
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+                page = await context.new_page()
+                
+                # Optimize: Block images
+                await page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2}", lambda route: route.abort())
+                
+                await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                
+                # Extract title and text content
+                title = await page.title()
+                # Simple text extraction
+                content = await page.evaluate("() => document.body.innerText")
+                
+                await browser.close()
+                logger.info(f"Browsed URL {url}, content length: {len(content)}")
+                return {"success": True, "url": url, "title": title, "content": content[:5000]} # Limit content size
+        except Exception as e:
+            logger.error(f"Error browsing URL {url}: {e}")
             return {"success": False, "error": str(e)}
